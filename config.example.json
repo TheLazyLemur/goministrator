@@ -1,0 +1,5 @@
+{
+  "Token": "<Discord Bot Token>",
+  "CommandPrefix": "-",
+  "DbName": "./Dev.db"
+}
