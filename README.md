@@ -13,6 +13,9 @@ being kicked from the room
  - run ```docker run goministrator```
 
 ## How to run with Go environment
+
+ - Download and install golang
+ - Install Make
  - Download the source code
  - Copy config.example.json to config.json
  - Replace the placeholder with your discord token
