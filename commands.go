@@ -1,58 +1,61 @@
 package main
 
 import (
-    "database/sql"
-    "fmt"
-    "github.com/bwmarrin/discordgo"
-    "github.com/lus/dgc"
-    "log"
-    "strings"
-    "time"
+	"fmt"
+	"github.com/bwmarrin/discordgo"
+	"github.com/lus/dgc"
+	"strings"
 )
 
-func Testing(ctx *dgc.Ctx)  {
-    HandleCommands(ctx.Session, ctx.Event)
+func HealthCheck(ctx *dgc.Ctx) {
+	err := ctx.RespondText("PONG!!!")
+	if err != nil {
+		panic("The service is NOT healthy: " + err.Error())
+	}
 }
 
-func HandleCommands(s *discordgo.Session, m *discordgo.MessageCreate) {
-    if m.Author.ID == s.State.User.ID {
-        return
-    }
+func CreateMeeting(ctx *dgc.Ctx) {
+	var sender = ctx.Event.Author
+	var mentions = ctx.Event.Message.Mentions
+	var allArgs = make([]string, ctx.Arguments.Amount())
+	for i := 0; i < ctx.Arguments.Amount(); i++ {
+		allArgs = append(allArgs, ctx.Arguments.Get(i).Raw())
+	}
 
-    if !strings.HasPrefix(m.Content, Configuration.CommandPrefix) {
-        return
-    }
+	buildMeetingResponseText(ctx, sender, mentions, allArgs)
+}
 
-    if strings.Contains(m.Content, "meeting-create") {
+func InitBotOnServer(ctx *dgc.Ctx) {
+	ctx.RespondText("Server " + ctx.Event.GuildID + " has been registered to handle meetings by AdminBot")
 
-        sqliteDatabase, _ := sql.Open("sqlite3", "./"+Configuration.DbName) // Open the created SQLite File
-        defer sqliteDatabase.Close()                                        // Defer Closing the database
+	//result, err := ctx.Session.ChannelMessageSend(ctx.Event.ChannelID, "Hello WOrld")
+	//if err != nil{
+	//	fmt.Println(err.Error())
+	//}
+	//
+	//fmt.Println(result)
+}
 
-        var createMeetingTableSQL = `CREATE TABLE meeting (
-        "idMeeting" integer NOT NULL PRIMARY KEY AUTOINCREMENT,     
-        "idOrganiser" TEXT,
-        "idSecond" TEXT,
-        "date" TEXT
-      );`
+func buildMeetingResponseText(ctx *dgc.Ctx, sender *discordgo.User, mentions []*discordgo.User, allArgs []string) {
 
-        statement, err := sqliteDatabase.Prepare(createMeetingTableSQL) // Prepare SQL Statement
+	var resultMessage = "Creating a meeting with " + sender.Username + " and "
 
-        if err != nil {
-            log.Fatal(err.Error())
-        }
-        statement.Exec()
+	for i := 0; i < len(mentions); i++ {
+		resultMessage += " " + mentions[i].Username + ", "
+	}
 
-        dateTime := time.Now()
-        currentTime, month, day := time.Now().Date()
+	for i := 0; i < len(allArgs); i++ {
+		fmt.Println(allArgs[i])
+		if strings.Contains(allArgs[i], "date:") {
+			var dateString = strings.Split(allArgs[i], ":")
 
-        var response = fmt.Sprintf(`INSERT INTO meeting(idOrganiser, idSecond, date) VALUES ("%s", "%s", "%s")`, m.Author.ID, m.Mentions[0].ID, dateTime)
+			resultMessage += " On " + dateString[1]
+		}
+	}
 
-        s.ChannelMessageSend(m.ChannelID,fmt.Sprintf("%s, %s have a meeting organised for %d %s %d", m.Author.Mention(), m.Mentions[0].Mention(), currentTime, month, day))
+	var err = ctx.RespondText(resultMessage)
 
-        statement2, err2 := sqliteDatabase.Prepare(response) // Prepare statement.
-        statement2.Exec()
-
-        log.Println(statement2)
-        log.Println(err2)
-    }
+	if err != nil {
+		fmt.Println("Could not create meeting")
+	}
 }

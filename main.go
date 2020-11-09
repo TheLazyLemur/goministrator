@@ -1,10 +1,9 @@
 package main
 
 import (
+	"database/sql"
 	"github.com/bwmarrin/discordgo"
 	"github.com/lus/dgc"
-
-	"database/sql"
 	"log"
 	"os"
 	"os/signal"
@@ -18,9 +17,36 @@ var (
 )
 
 func main() {
-
 	Configuration = ParseConfig()
 
+	createDb()
+
+	dg, err := discordgo.New("Bot " + Configuration.Token)
+
+	if err != nil {
+		log.Println("error creating Discord session,", err)
+		return
+	}
+
+
+
+	dg.Identify.Intents = discordgo.MakeIntent(discordgo.IntentsGuildMessages)
+
+	err = dg.Open()
+
+	setupRoutes(dg)
+
+	if err != nil {
+		log.Println("error opening connection,", err)
+		return
+	}
+
+	log.Println("Bot is now running.  Press CTRL-C to exit.")
+
+	waitForCloseSignal(dg)
+}
+
+func createDb() {
 	sqliteDatabase, _ := sql.Open("sqlite3", "./"+Configuration.DbName) // Open the created SQLite File
 	defer sqliteDatabase.Close()                                        // Defer Closing the database
 
@@ -33,41 +59,47 @@ func main() {
 
 	file.Close()
 	log.Println("sqlite-database.db created")
+}
 
-	dg, err := discordgo.New("Bot " + Configuration.Token)
-
-	if err != nil {
-		log.Println("error creating Discord session,", err)
-		return
-	}
-
-	dg.Identify.Intents = discordgo.MakeIntent(discordgo.IntentsGuildMessages)
-
-	err = dg.Open()
-
+func setupRoutes(dg *discordgo.Session) {
 	router := dgc.Create(&dgc.Router{
-		Prefixes: []string{"-"},
+		Prefixes: []string{Configuration.CommandPrefix},
 	})
-
-	// Register a simple ping command
 	router.RegisterCmd(&dgc.Command{
-		Name:        "org",
+		Name:        "ping",
 		Description: "Responds with 'pong!'",
-		Usage:       "org",
-		Example:     "ping",
+		Usage:       "ping",
+		Example:     "-ping",
 		IgnoreCase:  true,
-		Handler:     Testing,
+		Handler:     HealthCheck,
 	})
 
-	// Initialize the router
+	router.RegisterCmd(&dgc.Command{
+		Name:        "init",
+		Description: "Make is so the bot will handle meetings, the bot will check every 30 seconds and create the relative channel and roles if a db entry is found",
+		Usage:       "init",
+		Example:     "-init",
+		IgnoreCase:  true,
+		Handler:     InitBotOnServer,
+	})
+
+	router.RegisterCmd(&dgc.Command{
+		Name:        "create",
+		Description: "Sets up a meeting between mentioned participants and sender",
+		Usage:       "create",
+		Example:     "create @user1 @user2 -Date",
+		IgnoreCase:  true,
+		Flags: []string{
+			"greeting",
+		},
+		Handler:     CreateMeeting,
+	})
+
 	router.Initialize(dg)
+}
 
-	if err != nil {
-		log.Println("error opening connection,", err)
-		return
-	}
 
-	log.Println("Bot is now running.  Press CTRL-C to exit.")
+func waitForCloseSignal(dg *discordgo.Session) {
 	sc := make(chan os.Signal, 1)
 	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt, os.Kill)
 	<-sc
