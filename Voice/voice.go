@@ -6,6 +6,7 @@ import (
 	"github.com/pion/rtp"
 	"github.com/pion/webrtc/v3/pkg/media"
 	"github.com/pion/webrtc/v3/pkg/media/oggwriter"
+	"log"
 )
 
 var (
@@ -26,7 +27,11 @@ func createPionRTPPacket(p *discordgo.Packet) *rtp.Packet {
 }
 
 func StartRecording(session *discordgo.Session, guidId string, channelId string) {
-	Connection, _ = session.ChannelVoiceJoin(guidId, channelId, true, false)
+	c, err := session.ChannelVoiceJoin(guidId, channelId, true, false)
+	if err != nil {
+		log.Fatal(err.Error())
+	}
+	Connection = c
 	handleVoice(Connection.OpusRecv)
 }
 
@@ -34,6 +39,7 @@ func handleVoice(c chan *discordgo.Packet) {
 	files := make(map[uint32]media.Writer)
 	for p := range c {
 		file, ok := files[p.SSRC]
+
 		if !ok {
 			var err error
 			file, err = oggwriter.New(fmt.Sprintf("%d.ogg", p.SSRC), 48000, 2)
@@ -43,6 +49,7 @@ func handleVoice(c chan *discordgo.Packet) {
 			}
 			files[p.SSRC] = file
 		}
+
 		newRtp := createPionRTPPacket(p)
 		err := file.WriteRTP(newRtp)
 		if err != nil {
@@ -50,7 +57,10 @@ func handleVoice(c chan *discordgo.Packet) {
 		}
 	}
 	for _, f := range files {
-		f.Close()
+		err := f.Close()
+		if err != nil {
+			return
+		}
 	}
 }
 
