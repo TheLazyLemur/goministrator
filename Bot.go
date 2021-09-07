@@ -52,7 +52,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	}
 
 	if strings.HasPrefix(m.Content, "!end-recording") {
-		StopVoice()
+		Voice.Stop()
 	}
 
 	if strings.HasPrefix(m.Content, "!create-meeting") {
@@ -82,8 +82,4 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 			}
 		}
 	}
-}
-
-func StopVoice() {
-	Voice.Stop()
 }

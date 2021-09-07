@@ -7,9 +7,6 @@ package main
 
 import (
 	"flag"
-	"fmt"
-	"log"
-	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
@@ -28,18 +25,6 @@ func init() {
 	flag.Parse()
 }
 
-func homePage(w http.ResponseWriter, r *http.Request) {
-	_, err := fmt.Fprintf(w, "Welcome to the HomePage!")
-	if err != nil {
-		return
-	}
-}
-
-func handleRequests() {
-	http.HandleFunc("/", homePage)
-	log.Fatal(http.ListenAndServe(":42071", nil))
-}
-
 func main() {
 
 	if StartBot {
@@ -47,7 +32,7 @@ func main() {
 	}
 
 	if StartApi {
-		go handleRequests()
+		go HandleRequests()
 	}
 
 	sc := make(chan os.Signal, 1)
