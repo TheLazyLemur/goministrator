@@ -61,7 +61,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 
 		participantIds := strings.Split(content, ",")
 
-		var participants = []*discordgo.User{}
+		var participants []*discordgo.User
 
 		for _, element := range participantIds {
 			usr, _ := s.User(element)
