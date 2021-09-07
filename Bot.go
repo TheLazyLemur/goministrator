@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 )
 
@@ -37,18 +38,20 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		return
 	}
 
-	if m.Content == "!start-recording" {
+	if strings.HasPrefix(m.Content, "!start-recording") {
 		if Voice.Record(s, m) {
 			return
 		}
 	}
 
-	if m.Content == "!end-recording" {
+	if strings.HasPrefix(m.Content, "!end-recording") {
 		StopVoice()
 	}
 
-	if m.Content == "!create-meeting" {
-		println(m.Content)
+	if strings.HasPrefix(m.Content, "!create-meeting") {
+		stringSlice := strings.Split(m.Content, "!create-meeting")
+		content := stringSlice[1]
+		println(content)
 	}
 }
 
