@@ -7,6 +7,7 @@ import (
 	"github.com/pion/webrtc/v3/pkg/media"
 	"github.com/pion/webrtc/v3/pkg/media/oggwriter"
 	"log"
+	"time"
 )
 
 var (
@@ -32,17 +33,18 @@ func StartRecording(session *discordgo.Session, guidId string, channelId string)
 		log.Fatal(err.Error())
 	}
 	Connection = c
-	handleVoice(Connection.OpusRecv)
+	recordVoice(Connection.OpusRecv)
 }
 
-func handleVoice(c chan *discordgo.Packet) {
+func recordVoice(c chan *discordgo.Packet) {
 	files := make(map[uint32]media.Writer)
+	now := time.Now()
 	for p := range c {
 		file, ok := files[p.SSRC]
 
 		if !ok {
 			var err error
-			file, err = oggwriter.New(fmt.Sprintf("%d.ogg", p.SSRC), 48000, 2)
+			file, err = oggwriter.New(fmt.Sprintf("Recordings/%d.ogg", now.Unix()), 48000, 2)
 			if err != nil {
 				fmt.Printf("failed to create file %d.ogg, giving up on recording: %v\n", p.SSRC, err)
 				return
@@ -65,6 +67,7 @@ func handleVoice(c chan *discordgo.Packet) {
 }
 
 func Stop() {
+	Connection.Close()
 	close(Connection.OpusRecv)
 	Connection.Close()
 }
