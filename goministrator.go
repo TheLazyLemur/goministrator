@@ -7,6 +7,8 @@ package main
 
 import (
 	"flag"
+	"fmt"
+	"github.com/jasonlvhit/gocron"
 	"os"
 	"os/signal"
 	"syscall"
@@ -25,9 +27,19 @@ func init() {
 	flag.Parse()
 }
 
+func checkForUpcomingMeetings() {
+	fmt.Println("This task will run periodically")
+}
+
+func executeCronJob() {
+	gocron.Every(1).Second().Do(checkForUpcomingMeetings)
+	<-gocron.Start()
+}
+
 func main() {
 
 	if StartBot {
+		go executeCronJob()
 		go StartDiscordBot()
 	}
 
