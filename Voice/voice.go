@@ -27,6 +27,26 @@ func createPionRTPPacket(p *discordgo.Packet) *rtp.Packet {
 	}
 }
 
+func Record(s *discordgo.Session, m *discordgo.MessageCreate) bool {
+	c, err := s.State.Channel(m.ChannelID)
+	if err != nil {
+		return true
+	}
+
+	g, err := s.State.Guild(c.GuildID)
+	if err != nil {
+		return true
+	}
+
+	for _, vs := range g.VoiceStates {
+		if vs.UserID == m.Author.ID {
+			go StartRecording(s, vs.GuildID, vs.ChannelID)
+			return true
+		}
+	}
+	return false
+}
+
 func StartRecording(session *discordgo.Session, guidId string, channelId string) {
 	c, err := session.ChannelVoiceJoin(guidId, channelId, true, false)
 	if err != nil {
@@ -67,7 +87,6 @@ func recordVoice(c chan *discordgo.Packet) {
 }
 
 func Stop() {
-	Connection.Close()
 	close(Connection.OpusRecv)
 	Connection.Close()
 }

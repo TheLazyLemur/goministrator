@@ -1,173 +1,51 @@
 package main
 
 import (
-	"encoding/binary"
 	"flag"
 	"fmt"
-	"github.com/TheLazyLemur/Goministrator/Voice"
-	"github.com/bwmarrin/discordgo"
-	"io"
 	"log"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 )
 
 var (
-	Token  string
-	buffer [][]byte
+	Token    string
+	StartBot bool
+	StartApi bool
 )
 
 func init() {
-	buffer = make([][]byte, 0)
-	flag.StringVar(&Token, "token", "N/A", "The token for your discord bot")
-
+	flag.StringVar(&Token, "token", "N/A", "The token for your discord bot. Get this token at https://discord.com/developers/applications")
+	flag.BoolVar(&StartBot, "bot", false, "Should fire up the discord Bot")
+	flag.BoolVar(&StartApi, "api", false, "Should fire up the rest api")
 	flag.Parse()
 }
 
+func homePage(w http.ResponseWriter, r *http.Request) {
+	_, err := fmt.Fprintf(w, "Welcome to the HomePage!")
+	if err != nil {
+		return
+	}
+}
+
+func handleRequests() {
+	http.HandleFunc("/", homePage)
+	log.Fatal(http.ListenAndServe(":42071", nil))
+}
+
 func main() {
-	session, err := discordgo.New("Bot " + Token)
-	if err != nil {
-		log.Fatal(err.Error())
+
+	if StartBot {
+		go StartDiscordBot()
 	}
 
-	session.Identify.Intents = discordgo.IntentsAllWithoutPrivileged
-
-	err = session.Open()
-	if err != nil {
-		log.Fatal(err.Error())
+	if StartApi {
+		go handleRequests()
 	}
 
-	session.AddHandler(messageCreate)
-
-	fmt.Println("Bot is now running.  Press CTRL-C to exit.")
 	sc := make(chan os.Signal, 1)
 	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt, os.Kill)
 	<-sc
-	_ = session.Close()
-}
-
-func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
-	if m.Author.ID == s.State.User.ID {
-		return
-	}
-
-	if m.Content == "!start-recording" {
-		if record(s, m) {
-			return
-		}
-	}
-
-	if m.Content == "!end-recording" {
-		StopVoice()
-	}
-
-	if m.Content == "!create-meeting" {
-		println(m.Content)
-	}
-}
-
-func StopVoice() {
-	Voice.Stop()
-}
-
-func record(s *discordgo.Session, m *discordgo.MessageCreate) bool {
-	c, err := s.State.Channel(m.ChannelID)
-	if err != nil {
-		return true
-	}
-
-	g, err := s.State.Guild(c.GuildID)
-	if err != nil {
-		return true
-	}
-
-	for _, vs := range g.VoiceStates {
-		if vs.UserID == m.Author.ID {
-			err := playSound(s, vs.GuildID, vs.ChannelID)
-			if err != nil {
-				return true
-			}
-			go Voice.StartRecording(s, vs.GuildID, vs.ChannelID)
-			return true
-		}
-	}
-	return false
-}
-
-// loadSound attempts to load an encoded sound file from disk.
-func loadSound(fileName string) error {
-	file, err := os.Open(fileName)
-	if err != nil {
-		fmt.Println("Error opening dca file :", err)
-		return err
-	}
-
-	var opusLen int16
-
-	for {
-		err = binary.Read(file, binary.LittleEndian, &opusLen)
-
-		if err == io.EOF || err == io.ErrUnexpectedEOF {
-			err := file.Close()
-			if err != nil {
-				return err
-			}
-			return nil
-		}
-
-		if err != nil {
-			fmt.Println("Error reading from dca file :", err)
-			return err
-		}
-
-		InBuf := make([]byte, opusLen)
-		err = binary.Read(file, binary.LittleEndian, &InBuf)
-
-		if err != nil {
-			fmt.Println("Error reading from dca file :", err)
-			return err
-		}
-
-		buffer = append(buffer, InBuf)
-	}
-}
-
-// playSound plays the current buffer to the provided channel.
-func playSound(s *discordgo.Session, guildID, channelID string) (err error) {
-	err = loadSound("airhorn.dca")
-	if err != nil {
-		println(err.Error())
-	}
-
-	vc, err := s.ChannelVoiceJoin(guildID, channelID, false, true)
-	if err != nil {
-		return err
-	}
-
-	time.Sleep(250 * time.Millisecond)
-
-	err = vc.Speaking(true)
-	if err != nil {
-		return err
-	}
-
-	for _, buff := range buffer {
-		vc.OpusSend <- buff
-	}
-
-	err = vc.Speaking(false)
-	if err != nil {
-		return err
-	}
-
-	time.Sleep(250 * time.Millisecond)
-
-	err = vc.Disconnect()
-	if err != nil {
-		return err
-	}
-
-	return nil
 }
