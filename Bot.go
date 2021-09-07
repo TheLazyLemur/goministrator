@@ -38,6 +38,13 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		return
 	}
 
+	if strings.HasPrefix(m.Content, "!help") {
+		_, err := s.ChannelMessageSend(m.ChannelID, "```!start-recording``` The bot will join your room and record audio\n```!end-recording``` Will cause the bot to stop recording audio and eventually leve the room")
+		if err != nil {
+			log.Fatalf("Could not send message due to: %s", err.Error())
+		}
+	}
+
 	if strings.HasPrefix(m.Content, "!start-recording") {
 		if Voice.Record(s, m) {
 			return
@@ -50,8 +57,20 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 
 	if strings.HasPrefix(m.Content, "!create-meeting") {
 		stringSlice := strings.Split(m.Content, "!create-meeting")
-		content := stringSlice[1]
-		println(content)
+		content := strings.TrimSpace(stringSlice[1])
+
+		participantIds := strings.Split(content, ",")
+
+		var participants = []*discordgo.User{}
+
+		for _, element := range participantIds {
+			usr, _ := s.User(element)
+			participants = append(participants, usr)
+		}
+
+		for _, participant := range participants {
+			println(participant.Username)
+		}
 	}
 }
 

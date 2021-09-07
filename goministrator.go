@@ -2,7 +2,6 @@ package main
 
 //TODO: Create meeting with participants
 //TODO: Send reminder to participants of meeting before it starts
-//TODO: Bot to join and record meetings
 //TODO: Send link to all participants to download meeting
 //TODO: Frontend dashboard admin panel and scheduler
 

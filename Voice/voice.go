@@ -75,7 +75,7 @@ func recordVoice(c chan *discordgo.Packet) {
 		newRtp := createPionRTPPacket(p)
 		err := file.WriteRTP(newRtp)
 		if err != nil {
-			fmt.Printf("failed to write to file %d.ogg, giving up on recording: %v\n", p.SSRC, err)
+			log.Fatalf("failed to write to file %d.ogg, giving up on recording: %v\n", p.SSRC, err)
 		}
 	}
 	for _, f := range files {
