@@ -58,7 +58,6 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	if strings.HasPrefix(m.Content, "!create-meeting") {
 		stringSlice := strings.Split(m.Content, "!create-meeting")
 		content := strings.TrimSpace(stringSlice[1])
-
 		participantIds := strings.Split(content, ",")
 
 		var participants []*discordgo.User
@@ -69,7 +68,18 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		}
 
 		for _, participant := range participants {
-			println(participant.Username)
+			if participant.Bot {
+				continue
+			}
+			userChn, err := s.UserChannelCreate(participant.ID)
+			if err != nil {
+				log.Fatalf("Could not create user channel: %v", err.Error())
+			}
+
+			_, err = s.ChannelMessageSend(userChn.ID, "You have been added to a meeting at this time")
+			if err != nil {
+				log.Fatalf("Could not send message to user channel: %v", err.Error())
+			}
 		}
 	}
 }
