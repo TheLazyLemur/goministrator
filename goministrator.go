@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/binary"
+	"flag"
 	"fmt"
 	"github.com/TheLazyLemur/Goministrator/Voice"
 	"github.com/bwmarrin/discordgo"
@@ -19,8 +20,10 @@ var (
 )
 
 func init() {
-	Token = "ODUxNDU0MTg1NzYwMjI3MzQ4.YL4ggQ.Jh3an4JdLRUSQZi-PT6bGM7wUZ8"
 	buffer = make([][]byte, 0)
+	flag.StringVar(&Token, "token", "N/A", "The token for your discord bot")
+
+	flag.Parse()
 }
 
 func main() {
